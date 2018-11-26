@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>List of Files</title>
+</head>
+<body>
+<strong>Your files: </strong>
+<br>
+{%  if files %}
+    <table>
+        <tr>
+            <th>Name</th>
+            <th></th>
+            <th></th>
+        </tr>
+        {% for data in files %}
+        <tr>
+            <td>{{ data[0] }}</td>
+            <td><a href = "{{ data[1] }}" download>Download</a></td>
+            <td><a href = "{{ data[2] }}">Delete</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+You don't have any files.
+{% endif %}
+<form action = "/">
+    <input type ="submit" value="Back"/>
+</form>
+</body>
+</html>

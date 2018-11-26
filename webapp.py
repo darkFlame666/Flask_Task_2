@@ -17,7 +17,7 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True
 )
 app.upload_path = Path(os.path.join(APP_ROOT, 'uploads'))
-with open ('data.json') as jdata:
+with open('data.json') as jdata:
     data = json.load(jdata)
     app.users = data['users']
 
@@ -55,6 +55,11 @@ def logout():
     session.pop('current_user', None)
     return redirect(url_for('login'))
 
+@app.route("/list")
+def list():
+    files = get_user_files(session['current_user'])
+    return render_template('list.html', files=files)
+
 
 @app.route('/upload', methods=['GET', 'POST'])
 def file_add():
@@ -73,5 +78,16 @@ def creating_token(object, expiration):
     return jwt.encode(payload, app.jwt_secret_key, algorithm='HS256')
 
 
+def get_user_files(username):
+    filepath = UPLOAD_FOLDER+"/" +str(session.get('current_user'))
+    files = []
+    for filename in os.listdir(filepath):
+        data=[]
+        data.append(filename)
+        data.append("http://127.0.0.1:5002/download/"+filename)
+        data.append(("http://127.0.0.1:5002/delete/"+filename))
+        files.append(data)
+    return files
+
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True, port=5001)
