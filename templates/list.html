@@ -16,9 +16,9 @@
         </tr>
         {% for data in files %}
         <tr>
-            <td>{{ data[0] }}</td>
-            <td><a href = "{{ data[1] }}" download>Download</a></td>
-            <td><a href = "{{ data[2] }}">Delete</a></td>
+            <td>{{ data[0] }} </td>
+            <td><a href = "http://127.0.0.1:5002{{ data[1] }}" download>Download</a></td>
+            <td><a href = "http://127.0.0.1:5002{{ data[2] }}" delete>Delete</a></td>
         </tr>
         {% endfor %}
     </table>
