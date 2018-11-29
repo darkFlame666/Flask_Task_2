@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Shared files</title>
 </head>
 <body>
 {%  if files %}
@@ -34,5 +34,6 @@
 <form action = "/">
     <input type ="submit" value="Back"/>
 </form>
+ <script type="text/javascript" src="{{ url_for('static',filename='SSE.js')  }}"></script>
 </body>
 </html>

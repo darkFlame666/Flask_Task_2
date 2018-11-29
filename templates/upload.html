@@ -18,8 +18,12 @@
 <form action = "/logout">
         <input type ="submit" value="Logout"/>
 </form>
+<form action = "/shared">
+    <input type ="submit" value="Show shared files"/>
+</form>
 {% if message %}
     Too many files! Please delete something
 {% endif %}
+ <script type="text/javascript" src="{{ url_for('static',filename='SSE.js')  }}"></script>
 </body>
 </html>

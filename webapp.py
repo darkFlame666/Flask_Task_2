@@ -1,16 +1,20 @@
-from flask import Flask, session, render_template, redirect, request, json, url_for, abort
+from flask import Flask, session, render_template, redirect, request, json, url_for, abort, Response, stream_with_context, send_from_directory, make_response, jsonify
 import os
 from functools import wraps
 import uuid
 import redis as redis
 import datetime
 import jwt
+import json
 from pathlib import Path
 
+red = redis.StrictRedis(host='localhost', port=6379, db=0)
 redis = redis.Redis()
+
 app = Flask(__name__, static_url_path='/static')
-app.secret_key = b'35dvgy8i(UHoiawu hftvd9'
+app.secret_key = b'0293jr i(UHoiawu hft923'
 app.jwt_secret_key = 'SecretKey'
+jwtPassword = 'secret'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(APP_ROOT, 'static/uploads')
 app.upload_path = Path(os.path.join(APP_ROOT, './static/uploads'))
@@ -21,23 +25,23 @@ app.config.update(dict(
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_TYPE='redis'
 ))
+cwd = os.path.dirname(os.path.realpath(__file__))
+
+with open('data.json') as jdata:
+    data = json.load(jdata)
+    app.users = data['users']
 
 
-
-def login_required(f):
-    @wraps(f)
+def login_required(jdata):
+    @wraps(jdata)
     def wrapper(*args, **kwargs):
         if 'current_user' not in session:
             abort(401)
         if redis.get(session['current_user']) is None:
             abort(401)
-        return f(*args, **kwargs)
+        return jdata(*args, **kwargs)
+
     return wrapper
-
-
-with open('data.json') as jdata:
-    data = json.load(jdata)
-    app.users = data['users']
 
 
 def creating_token(object, expiration):
@@ -62,11 +66,13 @@ def login():
             if request.form['username'] == user['username'] and request.form['password'] == user['password']:
                 current = user
                 session['logged_in'] = True
+                session['notif'] = False
                 break
         if current:
             sid = str(uuid.uuid4())
             session['current_user'] = sid
             session['logged_in'] = True
+            session['notif'] = False
             redis.set(session['current_user'], user['username'], ex=300)
             return redirect(url_for('home'))
         else:
@@ -77,7 +83,6 @@ def login():
 
 @app.route('/logout')
 def logout():
-    #session['current_user'] = None
     session['logged_in'] = None
     redis.delete(session['current_user'])
     session.pop('current_user', None)
@@ -130,19 +135,30 @@ def create_user_dir(username):
     os.mkdir(UPLOAD_FOLDER+"/"+username)
 
 
-@app.route('/static/<path:subpath>')
-def send_static(subpath):
-    return app.send_static_file(subpath)
+@app.route('/stream')
+def stream():
+    return Response(event_stream(), mimetype="text/event-stream")
+
+
+@stream_with_context
+def event_stream():
+    if (redis.get(session['notif'])):
+        session['notif'] = False
+        pubsub = red.pubsub()
+        pubsub.subscribe('notifications')
+        for msg in pubsub.listen():
+            yield 'data: %s\n\n' % 'New file has been added to shared files!'
 
 
 @app.route("/upload", methods=['GET', 'POST'])
+@login_required
 def file_add():
-    #redis.expire(session['current_user'], time=50)
     user_path = app.upload_path.joinpath(redis.get(session['current_user']).decode()).resolve()
-    print(user_path)
+    if not does_users_dir_exists(redis.get(session['current_user']).decode()):
+        create_user_dir(redis.get(session['current_user']).decode())
     files = [x.name for x in user_path.glob('**/*') if x.is_file()]
     files_len = len(files)
-    token = creating_token("allow", 3000).decode('utf-8')
+    token = creating_token("allow", 300).decode('utf-8')
     return render_template('upload.html', files_len=files_len, token=token)
 
 
