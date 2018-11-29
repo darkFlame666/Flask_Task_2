@@ -4,18 +4,20 @@ import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
 from webapp import login_required
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static/uploads')
 app.secret_key = b'0293jr i(UHoiawu hft923'
 app.jwt_secret_key = 'SecretKey'
+JWT_ALGORITHM = 'HS384'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(APP_ROOT, 'uploads')
-app.config.update(
+UPLOAD_FOLDER = os.path.join(APP_ROOT, 'static/uploads')
+app.upload_path = Path(os.path.join(APP_ROOT, 'static/uploads'))
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config.update(dict(
     #SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-)
-app.upload_path = Path(os.path.join(APP_ROOT, 'uploads'))
-JWT_ALGORITHM = 'HS384'
+))
+
 
 @app.route("/upload", methods=['POST', 'GET'])
 #@login_required
@@ -42,18 +44,24 @@ def upload():
 
 
 @app.route("/download/<string:token>")
-#@login_required
+@login_required
 def download(token):
     try:
         user = jwt.decode(token.encode(), app.jwt_secret_key, algorithm='HS256')
     except jwt.ExpiredSignatureError:
-        return "error"
+        return os.abort(401)
     user_path = app.upload_path.joinpath(user['user']).resolve()
+    print(user_path)
     q = user_path / user['file']
     if q.exists():
         return send_from_directory(user_path, user['file'])
     else:
         os.abort(404)
+
+
+@app.route('/static/uploads/<path:path>')
+def send_js(path):
+    return send_from_directory('js', path)
 
 
 @app.route('/delete/<string:token>')
@@ -71,12 +79,9 @@ def delete(token):
         os.abort(404)
 
 
-def does_users_dir_exists(username):
-    return os.path.isdir(UPLOAD_FOLDER+"/"+username)
-
-
-def create_user_dir(username):
-    os.mkdir(UPLOAD_FOLDER+"/"+username)
+@app.route('/static/<path:subpath>')
+def send_static(subpath):
+    return app.send_static_file(subpath)
 
 
 if __name__ == "__main__":

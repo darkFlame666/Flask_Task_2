@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+{%  if files %}
+    <table border="1">
+        <tr>
+            <th>Author</th>
+            <th>File</th>
+            <th>URL</th>
+        </tr>
+        {%  for data in files %}
+        <tr>
+            <td>{{ data[0] }}</td>
+            <td>
+                {%  for dat in data[1:] %}
+                <ul>{{ dat[0] }}</ul>
+                {% endfor %}
+            </td>
+        <td>
+            {% for dat in data[1:] %}
+            <ul><a href ="http://127.0.0.1:5001{{ dat[1] }}">URL</a> </ul>
+            {% endfor %}
+        </td>
+        </tr>
+    {% endfor %}
+    </table>
+{%  else %}
+    Lack of files to show.
+{% endif %}
+<form action = "/">
+    <input type ="submit" value="Back"/>
+</form>
+</body>
+</html>

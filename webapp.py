@@ -8,18 +8,20 @@ import jwt
 from pathlib import Path
 
 redis = redis.Redis()
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 app.secret_key = b'35dvgy8i(UHoiawu hftvd9'
 app.jwt_secret_key = 'SecretKey'
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(APP_ROOT, 'uploads')
-app.config.update(
+UPLOAD_FOLDER = os.path.join(APP_ROOT, 'static/uploads')
+app.upload_path = Path(os.path.join(APP_ROOT, './static/uploads'))
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config.update(dict(
     #SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_TYPE='redis'
-)
-app.upload_path = Path(os.path.join(APP_ROOT, 'uploads'))
+))
+
 
 
 def login_required(f):
@@ -38,6 +40,13 @@ with open('data.json') as jdata:
     app.users = data['users']
 
 
+def creating_token(object, expiration):
+    payload = {"user": redis.get(session['current_user']).decode('utf-8'),
+                "file": object,
+                "exp": (datetime.datetime.utcnow() + datetime.timedelta(seconds=expiration))}
+    return jwt.encode(payload, app.jwt_secret_key, algorithm='HS256')
+
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if not session.get('current_user'):
@@ -47,7 +56,6 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
     if request.method == 'POST':
         current = None
         for user in data['users']:
@@ -82,35 +90,60 @@ def logout():
 def list():
     redis.expire(session['current_user'], time=300)
     user_path = app.upload_path.joinpath(redis.get(session['current_user']).decode('utf-8')).resolve()
+    user = redis.get(session['current_user']).decode('utf-8')
     files = []
     for filename in os.listdir(str(user_path)):
         data = []
         data.append(filename)
         data.append("/download/" + filename)
-        data.append(("/delete/" + filename))
+        data.append("/delete/" + filename)
+        data.append("/static/uploads/"+user+"/"+filename)
         files.append(data)
 
     tokens = {}
     return render_template('list.html', user=redis.get(session['current_user']).decode('utf-8'), files=files, tokens=tokens)
 
 
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route("/shared", methods=['GET', 'POST'])
+def shared():
+    user_path = UPLOAD_FOLDER
+    print(user_path)
+    files = []
+    for dir in os.listdir(str(user_path)):
+        data = []
+        data.append(dir)
+        for filename in os.listdir(str(user_path)+"/"+dir):
+            dat = []
+            dat.append(filename)
+            dat.append("/static/uploads/"+dir+"/"+filename)
+            data.append(dat)
+        files.append(data)
+    tokens = {}
+    return render_template('shared.html', files=files, tokens=tokens)
+
+
+def does_users_dir_exists(username):
+    return os.path.isdir(UPLOAD_FOLDER+"/"+username)
+
+
+def create_user_dir(username):
+    os.mkdir(UPLOAD_FOLDER+"/"+username)
+
+
+@app.route('/static/<path:subpath>')
+def send_static(subpath):
+    return app.send_static_file(subpath)
+
+
+@app.route("/upload", methods=['GET', 'POST'])
 def file_add():
     #redis.expire(session['current_user'], time=50)
     user_path = app.upload_path.joinpath(redis.get(session['current_user']).decode()).resolve()
+    print(user_path)
     files = [x.name for x in user_path.glob('**/*') if x.is_file()]
     files_len = len(files)
     token = creating_token("allow", 3000).decode('utf-8')
     return render_template('upload.html', files_len=files_len, token=token)
-
-
-def creating_token(object, expiration):
-    payload = { "user" : redis.get(session['current_user']).decode('utf-8'),
-                "file" : object,
-                "exp"  : (datetime.datetime.utcnow() + datetime.timedelta(seconds=expiration))}
-    return jwt.encode(payload, app.jwt_secret_key, algorithm='HS256')
-
-
 
 
 if __name__ == '__main__':
