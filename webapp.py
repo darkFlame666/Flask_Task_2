@@ -1,17 +1,44 @@
-from flask import Flask, session, render_template, redirect, request, json, url_for, abort, Response, stream_with_context, send_from_directory, make_response, jsonify
+from flask import request, abort, Response, stream_with_context
 import os
-from functools import wraps
 import uuid
 import redis as redis
 import datetime
 import jwt
-import json
 from pathlib import Path
+
+from functools import wraps
+import json
+from os import environ as env
+from werkzeug.exceptions import HTTPException
+
+from dotenv import load_dotenv, find_dotenv
+from flask import Flask
+from flask import jsonify
+from flask import redirect
+from flask import render_template
+from flask import session
+from flask import url_for
+from authlib.flask.client import OAuth
+from six.moves.urllib.parse import urlencode
 
 red = redis.StrictRedis(host='localhost', port=6379, db=0)
 redis = redis.Redis()
 
 app = Flask(__name__, static_url_path='/static')
+oauth = OAuth(app)
+auth0 = oauth.register(
+    'auth0',
+    client_id='PzTcCUU6vODEaglC6h9Q5P3ehAwsYvHD',
+    client_secret='ZH2ukJcn_73uE407Zlr360qJnT-LvCcol0SHRQ9eEEYRoYT1bKvvowPvmzuwnE3H',
+    api_base_url='https://darkflame666.eu.auth0.com',
+    access_token_url='https://darkflame666.eu.auth0.com/oauth/token',
+    authorize_url='https://darkflame666.eu.auth0.com/authorize',
+    client_kwargs={
+        'scope': 'openid profile',
+    },
+
+)
+
 app.secret_key = b'0293jr i(UHoiawu hft923'
 app.jwt_secret_key = 'SecretKey'
 jwtPassword = 'secret'
@@ -30,6 +57,17 @@ cwd = os.path.dirname(os.path.realpath(__file__))
 with open('data.json') as jdata:
     data = json.load(jdata)
     app.users = data['users']
+
+
+def requires_auth(f):
+  @wraps(f)
+  def decorated(*args, **kwargs):
+    if 'profile' not in session:
+      # Redirect to Login page here
+      return redirect('/')
+    return f(*args, **kwargs)
+
+  return decorated
 
 
 def login_required(jdata):
@@ -51,6 +89,30 @@ def creating_token(object, expiration):
     return jwt.encode(payload, app.jwt_secret_key, algorithm='HS256')
 
 
+@app.route('/callback')
+def callback_handling():
+    auth0.authorize_access_token()
+    resp = auth0.get('userinfo')
+    userinfo = resp.json()
+
+    # Store the user information in flask session.
+    session['jwt_payload'] = userinfo
+    session['profile'] = {
+        'user_id': userinfo['sub'],
+        'name': userinfo['name'],
+        'picture': userinfo['picture']
+    }
+    return redirect('/dashboard')
+
+
+@app.route('/dashboard')
+@requires_auth
+def dashboard():
+    return render_template('dashboard.html',
+                           userinfo=session['profile'],
+                           userinfo_pretty=json.dumps(session['jwt_payload'], indent=4))
+
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if not session.get('current_user'):
@@ -58,36 +120,48 @@ def home():
     return redirect(url_for('file_add'))
 
 
-@app.route('/login', methods=['GET', 'POST'])
+#@app.route('/login', methods=['GET', 'POST'])
+#def login():
+#    if request.method == 'POST':
+#        current = None
+#        for user in data['users']:
+#            if request.form['username'] == user['username'] and request.form['password'] == user['password']:
+#                current = user
+#                session['logged_in'] = True
+#                session['notif'] = False
+#                break
+#        if current:
+#            sid = str(uuid.uuid4())
+#            session['current_user'] = sid
+#            session['logged_in'] = True
+#            session['notif'] = False
+#            redis.set(session['current_user'], user['username'], ex=300)
+#            return redirect(url_for('home'))
+#        else:
+#            error = "Invalid Credentials. Please try again."
+#            return render_template('loginpg.html', error=error)
+#    return render_template('loginpg.html')
+@app.route('/login')
 def login():
-    if request.method == 'POST':
-        current = None
-        for user in data['users']:
-            if request.form['username'] == user['username'] and request.form['password'] == user['password']:
-                current = user
-                session['logged_in'] = True
-                session['notif'] = False
-                break
-        if current:
-            sid = str(uuid.uuid4())
-            session['current_user'] = sid
-            session['logged_in'] = True
-            session['notif'] = False
-            redis.set(session['current_user'], user['username'], ex=300)
-            return redirect(url_for('home'))
-        else:
-            error = "Invalid Credentials. Please try again."
-            return render_template('loginpg.html', error=error)
-    return render_template('loginpg.html')
+    return auth0.authorize_redirect(redirect_uri='http://127.0.0.1:5001/callback', audience='https://darkflame666.eu.auth0.com/userinfo')
 
 
 @app.route('/logout')
 def logout():
-    session['logged_in'] = None
-    redis.delete(session['current_user'])
-    session.pop('current_user', None)
+    # Clear session stored data
     session.clear()
-    return redirect(url_for('login'))
+    # Redirect user to logout endpoint
+    params = {'returnTo': url_for('login', _external=True), 'client_id': 'PzTcCUU6vODEaglC6h9Q5P3ehAwsYvHD'}
+    return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
+
+
+#@app.route('/logout')
+#def logout():
+#    session['logged_in'] = None
+#    redis.delete(session['current_user'])
+#    session.pop('current_user', None)
+#    session.clear()
+#    return redirect(url_for('login'))
 
 
 @app.route("/list", methods=['GET', 'POST'])

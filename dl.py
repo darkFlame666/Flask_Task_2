@@ -45,10 +45,8 @@ def upload():
     user_path.mkdir(parents=True, exist_ok=True)
     q = user_path / filename
     f.save(str(q))
-    print(redis.get(session['current_user']))
-    print(session['notif'])
-    redis.set(session['notif'], True, ex=2)
-    red.publish('notifications', 'New file has been added to shared  files!')
+#   redis.set(session['notif'], True, ex=2)
+  #  red.publish('notifications', 'New file has been added to shared  files!')
     return redirect('http://127.0.0.1:5001/list')
 
 
