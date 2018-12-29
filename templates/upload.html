@@ -2,28 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel = "stylesheet" href = "{{ url_for('static', filename = 'custom.css') }}" type = "text/css"/>
     <title>Upload</title>
 </head>
 <body>
-<h1>File Uploader</h1>
-<form id = "upload-form" action = "http://127.0.0.1:5002/upload" method="POST" enctype="multipart/form-data">
-    <input type="file" name="file"  placeholder="file"/>
-    <br>
-    <input type = "hidden" name = "token" value ="{{ token }}" required/>
-    <input type="submit" value="send"/>
-</form>
-<form action = "/list">
-    <input type ="submit" value="View list"/>
-</form>
-<form action = "/logout">
-        <input type ="submit" value="Logout"/>
-</form>
-<form action = "/shared">
-    <input type ="submit" value="Show shared files"/>
-</form>
+    <div class="myContent">
+        <div class="container">
+            <header>
+                <h1>File Uploader</h1>
+            </header>
+            <div class = "row">
+                <nav class = "col-md-6 col-lg-3">
+                    <form id = "upload-form" action = "http://127.0.0.1:5002/upload" method="POST" enctype="multipart/form-data">
+                            <input type="file" name="file"  placeholder="file"/>
+                            <br>
+                            <input type = "hidden" name = "token" value ="{{ token }}" required/>
+                            <input type="submit" value="send"/>
+                    </form>
+                </nav>
+                <nav class = "col-md-6 col-lg-3">
+                    <form action = "/list">
+                        <input type ="submit" value="View list"/>
+                    </form>
+                </nav>
+                <nav class = "col-md-6 col-lg-3">
+                    <form action = "/logout">
+                 <input type ="submit" value="Logout"/>
+                    </form>
+                </nav>
+                <nav class = "col-md-6 col-lg-3">
+                    <form action = "/shared">
+                        <input type ="submit" value="Show shared files"/>
+                    </form>
+                </nav>
 {% if message %}
     Too many files! Please delete something
 {% endif %}
- <script type="text/javascript" src="{{ url_for('static',filename='SSE.js')  }}"></script>
+            </div>
+        <section>
+            Welcome  {{ username }}!
+        </section>
+        <article>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras in auctor elit. Nulla facilisi. Integer consectetur suscipit arcu tristique vestibulum. Cras feugiat purus quis erat euismod, non viverra arcu pulvinar. Nam nec laoreet lacus. Nam tempor et odio id venenatis. Praesent nisi risus, feugiat vel condimentum ut, pretium sed purus. Quisque pellentesque, nulla a aliquet commodo, ante nisl efficitur risus, ac sagittis mauris dui ut arcu. Phasellus sit amet leo vehicula, ornare augue vitae, eleifend nisi. Praesent hendrerit vel dui nec finibus. Praesent pulvinar ante a fermentum scelerisque. Vivamus leo odio, aliquam eget pulvinar aliquet, commodo nec lectus. Etiam faucibus ante sed porta molestie. Suspendisse lorem metus, vehicula vitae orci quis, laoreet lobortis metus. Aliquam placerat, velit sed iaculis aliquet, neque velit imperdiet metus, quis dignissim massa neque a quam. Aenean a viverra erat.
+        </article>
+        <footer>
+            Student: Andrzej Sikorski
+        </footer>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+<!--<script type="text/javascript" src="{{ url_for('static',filename='SSE.js')  }}"></script>-->
 </body>
 </html>

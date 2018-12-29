@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel = "stylesheet" href = "{{ url_for('static', filename = 'custom.css') }}" type = "text/css"/>
     <title>Shared files</title>
 </head>
 <body>
@@ -34,6 +36,6 @@
 <form action = "/">
     <input type ="submit" value="Back"/>
 </form>
- <script type="text/javascript" src="{{ url_for('static',filename='SSE.js')  }}"></script>
+<!-- <script type="text/javascript" src="{{ url_for('static',filename='SSE.js')  }}"></script>-->
 </body>
 </html>

@@ -4,7 +4,7 @@ import os
 import redis as redis
 from werkzeug.utils import secure_filename, redirect
 from pathlib import Path
-from webapp import login_required
+#from webapp import login_required
 
 app = Flask(__name__, static_url_path='/static/uploads')
 app.secret_key = b'0293jr i(UHoiawu hft923'
@@ -21,11 +21,10 @@ app.config.update(dict(
 cwd = os.path.dirname(os.path.realpath(__file__))
 red = redis.StrictRedis(host='localhost', port=6379, db=0)
 redis = redis.Redis()
-app.ucho = False
 
 
 @app.route("/upload", methods=['POST', 'GET'])
-@login_required
+#@login_required
 @stream_with_context
 def upload():
     token = request.form['token']

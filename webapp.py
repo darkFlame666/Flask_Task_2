@@ -10,7 +10,6 @@ from functools import wraps
 import json
 from os import environ as env
 from werkzeug.exceptions import HTTPException
-
 from dotenv import load_dotenv, find_dotenv
 from flask import Flask
 from flask import jsonify
@@ -23,7 +22,6 @@ from six.moves.urllib.parse import urlencode
 
 red = redis.StrictRedis(host='localhost', port=6379, db=0)
 redis = redis.Redis()
-
 app = Flask(__name__, static_url_path='/static')
 oauth = OAuth(app)
 auth0 = oauth.register(
@@ -63,23 +61,22 @@ def requires_auth(f):
   @wraps(f)
   def decorated(*args, **kwargs):
     if 'profile' not in session:
-      # Redirect to Login page here
       return redirect('/')
     return f(*args, **kwargs)
 
   return decorated
 
 
-def login_required(jdata):
-    @wraps(jdata)
-    def wrapper(*args, **kwargs):
-        if 'current_user' not in session:
-            abort(401)
-        if redis.get(session['current_user']) is None:
-            abort(401)
-        return jdata(*args, **kwargs)
+#def login_required(jdata):
+#    @wraps(jdata)
+#    def wrapper(*args, **kwargs):
+#        if 'current_user' not in session:
+#            abort(401)
+#        if redis.get(session['current_user']) is None:
+#            abort(401)
+#        return jdata(*args, **kwargs)
 
-    return wrapper
+#    return wrapper
 
 
 def creating_token(object, expiration):
@@ -102,22 +99,28 @@ def callback_handling():
         'name': userinfo['name'],
         'picture': userinfo['picture']
     }
-    return redirect('/dashboard')
+    sid = str(uuid.uuid4())
+    session['current_user'] = sid
+    redis.set(session['current_user'], userinfo['name'], ex=300)
+    return redirect('http://127.0.0.1:5001/upload')
 
 
-@app.route('/dashboard')
-@requires_auth
-def dashboard():
-    return render_template('dashboard.html',
-                           userinfo=session['profile'],
-                           userinfo_pretty=json.dumps(session['jwt_payload'], indent=4))
+#@app.route('/dashboard')
+#@requires_auth
+#def dashboard():
+#    return render_template('dashboard.html',
+#                           userinfo=session['profile'],
+#                           userinfo_pretty=json.dumps(session['jwt_payload'], indent=4))
 
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    if not session.get('current_user'):
-        return redirect(url_for('login'))
-    return redirect(url_for('file_add'))
+    if 'profile' in session:
+        return redirect('/upload')
+    return render_template('home.html')
+    #if not session.get('current_user'):
+        #return redirect(url_for('login'))
+    #return redirect(url_for('file_add'))
 
 
 #@app.route('/login', methods=['GET', 'POST'])
@@ -143,6 +146,8 @@ def home():
 #    return render_template('loginpg.html')
 @app.route('/login')
 def login():
+    if 'profile' in session:
+        return redirect('/upload')
     return auth0.authorize_redirect(redirect_uri='http://127.0.0.1:5001/callback', audience='https://darkflame666.eu.auth0.com/userinfo')
 
 
@@ -165,7 +170,7 @@ def logout():
 
 
 @app.route("/list", methods=['GET', 'POST'])
-@login_required
+#@login_required
 def list():
     redis.expire(session['current_user'], time=300)
     user_path = app.upload_path.joinpath(redis.get(session['current_user']).decode('utf-8')).resolve()
@@ -225,15 +230,17 @@ def event_stream():
 
 
 @app.route("/upload", methods=['GET', 'POST'])
-@login_required
+#@login_required
 def file_add():
+    usr = redis.get(session['current_user']).decode()
+    print(usr)
     user_path = app.upload_path.joinpath(redis.get(session['current_user']).decode()).resolve()
     if not does_users_dir_exists(redis.get(session['current_user']).decode()):
         create_user_dir(redis.get(session['current_user']).decode())
     files = [x.name for x in user_path.glob('**/*') if x.is_file()]
     files_len = len(files)
     token = creating_token("allow", 300).decode('utf-8')
-    return render_template('upload.html', files_len=files_len, token=token)
+    return render_template('upload.html', files_len=files_len, token=token, username=usr)
 
 
 if __name__ == '__main__':
